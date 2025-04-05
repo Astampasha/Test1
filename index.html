@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div id="start-screen">
+            <h1>Test</h1>
+            <div class="group-selection">
+                <h2>Select Question Groups</h2>
+                <button id="toggle-all-btn" class="full-width-btn">Select All Groups</button>
+                <div id="group-controls"></div>
+                <button id="start-btn" class="full-width-btn">Start Test</button>
+            </div>
+        </div>
+
+        <div id="test-screen" style="display: none;">
+            <div class="question-info">
+                <div id="question-counter">Question: 1/100</div>
+                <div id="score">Score: 0</div>
+            </div>
+            <div class="question-area">
+                <h2 id="question-text"></h2>
+                <div id="answers"></div>
+            </div>
+            <button id="next-btn" class="full-width-btn" disabled>Next Question</button>
+        </div>
+
+        <div id="end-screen" style="display: none;">
+            <h2>Test Completed!</h2>
+            <div id="result"></div>
+            <button id="restart-btn" class="full-width-btn">Restart Test</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
