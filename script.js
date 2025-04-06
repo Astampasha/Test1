@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
         { name: "ქირურგია", file: "group18.json" },
         { name: "გინეკოლოგია", file: "group21.json" },
     ];
-    const QUESTIONS_PER_TEST = 100;
 
+    // DOM elements
     const startScreen = document.getElementById('start-screen');
     const testScreen = document.getElementById('test-screen');
     const endScreen = document.getElementById('end-screen');
@@ -28,16 +28,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const scoreDisplay = document.getElementById('score');
     const resultDiv = document.getElementById('result');
 
+    // Test state
     let selectedGroups = [];
     let testQuestions = [];
     let currentQuestionIndex = 0;
     let score = 0;
+    let totalQuestions = 0;
 
+    // Initialize the app
     function init() {
         createGroupControls();
         setupEventListeners();
     }
 
+    // Create group selection controls based on QUESTION_GROUPS
     function createGroupControls() {
         groupControls.innerHTML = '';
         
@@ -60,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Set up event listeners
     function setupEventListeners() {
         toggleAllBtn.addEventListener('click', toggleAllGroups);
         startBtn.addEventListener('click', startTest);
@@ -67,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
         restartBtn.addEventListener('click', restartTest);
     }
 
+    // Toggle all groups
     function toggleAllGroups() {
         const checkboxes = document.querySelectorAll('.group-item input');
         const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
@@ -78,6 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleAllBtn.textContent = allChecked ? 'Select All Groups' : 'Deselect All Groups';
     }
 
+    // Start the test
     async function startTest() {
         selectedGroups = Array.from(document.querySelectorAll('.group-item input:checked'))
                             .map(checkbox => checkbox.value);
@@ -92,11 +99,19 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             testQuestions = await loadQuestions(selectedGroups);
+            totalQuestions = testQuestions.length;
+            
+            if (totalQuestions === 0) {
+                alert('No questions found in selected groups!');
+                return;
+            }
+            
             startScreen.style.display = 'none';
             testScreen.style.display = 'block';
             currentQuestionIndex = 0;
             score = 0;
             scoreDisplay.textContent = '0';
+            updateQuestionCounter();
             showQuestion(testQuestions[currentQuestionIndex]);
         } catch (error) {
             console.error('Error loading questions:', error);
@@ -106,6 +121,8 @@ document.addEventListener('DOMContentLoaded', function() {
             startBtn.textContent = 'Start Test';
         }
     }
+
+    // Load questions from JSON files
     async function loadQuestions(groups) {
         let allQuestions = [];
         
@@ -115,6 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!response.ok) throw new Error(`Failed to load ${groupFile}`);
                 const questions = await response.json();
                 
+                // Validate questions structure
                 if (!Array.isArray(questions)) {
                     throw new Error(`Invalid format in ${groupFile}. Expected array of questions.`);
                 }
@@ -132,17 +150,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        if (allQuestions.length === 0) {
-            throw new Error('No questions were loaded from selected groups');
-        }
-        
-        return shuffleArray(allQuestions).slice(0, QUESTIONS_PER_TEST);
+        // Shuffle all questions
+        return shuffleArray(allQuestions);
     }
 
+    // Show a question
     function showQuestion(question) {
         questionText.textContent = question.question;
         answersDiv.innerHTML = '';
-        questionCounter.textContent = `Question: ${currentQuestionIndex + 1}/${Math.min(testQuestions.length, QUESTIONS_PER_TEST)}`;
         
         question.answers.forEach(answer => {
             const button = document.createElement('button');
@@ -155,6 +170,12 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.disabled = true;
     }
 
+    // Update question counter
+    function updateQuestionCounter() {
+        questionCounter.textContent = `Question: ${currentQuestionIndex + 1}/${totalQuestions}`;
+    }
+
+    // Check the answer
     function checkAnswer(button, selectedAnswer, correctAnswer) {
         const buttons = document.querySelectorAll('.answer-btn');
         
@@ -176,23 +197,27 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.disabled = false;
     }
 
+    // Show next question
     function nextQuestion() {
         currentQuestionIndex++;
         
-        if (currentQuestionIndex < Math.min(testQuestions.length, QUESTIONS_PER_TEST)) {
+        if (currentQuestionIndex < totalQuestions) {
+            updateQuestionCounter();
             showQuestion(testQuestions[currentQuestionIndex]);
         } else {
             testScreen.style.display = 'none';
             endScreen.style.display = 'block';
-            resultDiv.textContent = `Your Score: ${score}/${Math.min(testQuestions.length, QUESTIONS_PER_TEST)}`;
+            resultDiv.textContent = `Your Score: ${score}/${totalQuestions}`;
         }
     }
 
+    // Restart the test
     function restartTest() {
         endScreen.style.display = 'none';
         startScreen.style.display = 'block';
     }
 
+    // Fisher-Yates shuffle algorithm
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -201,5 +226,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return array;
     }
 
+    // Initialize the app
     init();
 });
