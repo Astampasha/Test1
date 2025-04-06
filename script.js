@@ -1,5 +1,19 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // DOM elements
+    const QUESTION_GROUPS = [
+        { name: "კარდიოლოგია", file: "group1.json" },
+        { name: "პულმონოლოგია", file: "group4.json" },
+        { name: "გასტროენტოლოგია", file: "group5.json" },
+        { name: "ნეფროლოგია", file: "group7.json" },
+        { name: "ჰემატოლოგია", file: "group8.json" },
+        { name: "ენდოკრინოლოგია", file: "group10.json" },
+        { name: "რევმატოლოგია", file: "group11.json" },
+        { name: "იმუნოლოგია - ალეგოლორგია", file: "group12.json" },
+        { name: "პედიატრია", file: "group14.json" },
+        { name: "ქირურგია", file: "group18.json" },
+        { name: "გინეკოლოგია", file: "group21.json" },
+    ];
+    const QUESTIONS_PER_TEST = 100;
+
     const startScreen = document.getElementById('start-screen');
     const testScreen = document.getElementById('test-screen');
     const endScreen = document.getElementById('end-screen');
@@ -14,42 +28,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const scoreDisplay = document.getElementById('score');
     const resultDiv = document.getElementById('result');
 
-    // Test configuration
-    const TOTAL_GROUPS = 28;
-    const QUESTIONS_PER_TEST = 100;
     let selectedGroups = [];
     let testQuestions = [];
     let currentQuestionIndex = 0;
     let score = 0;
 
-    // Initialize the app
     function init() {
         createGroupControls();
         setupEventListeners();
     }
 
-    // Create group selection controls
     function createGroupControls() {
-        for (let i = 1; i <= TOTAL_GROUPS; i++) {
+        groupControls.innerHTML = '';
+        
+        QUESTION_GROUPS.forEach((group, index) => {
             const groupItem = document.createElement('div');
             groupItem.className = 'group-item';
             
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.id = `group-${i}`;
-            checkbox.value = i;
+            checkbox.id = `group-${index}`;
+            checkbox.value = group.file;
             
             const label = document.createElement('label');
-            label.htmlFor = `group-${i}`;
-            label.textContent = `Group ${i} (${i === TOTAL_GROUPS ? 44 : 100} questions)`;
+            label.htmlFor = `group-${index}`;
+            label.textContent = group.name;
             
             groupItem.appendChild(checkbox);
             groupItem.appendChild(label);
             groupControls.appendChild(groupItem);
-        }
+        });
     }
 
-    // Set up event listeners
     function setupEventListeners() {
         toggleAllBtn.addEventListener('click', toggleAllGroups);
         startBtn.addEventListener('click', startTest);
@@ -57,7 +67,6 @@ document.addEventListener('DOMContentLoaded', function() {
         restartBtn.addEventListener('click', restartTest);
     }
 
-    // Toggle all groups
     function toggleAllGroups() {
         const checkboxes = document.querySelectorAll('.group-item input');
         const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
@@ -69,7 +78,6 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleAllBtn.textContent = allChecked ? 'Select All Groups' : 'Deselect All Groups';
     }
 
-    // Start the test
     async function startTest() {
         selectedGroups = Array.from(document.querySelectorAll('.group-item input:checked'))
                             .map(checkbox => checkbox.value);
@@ -98,27 +106,39 @@ document.addEventListener('DOMContentLoaded', function() {
             startBtn.textContent = 'Start Test';
         }
     }
-
-    // Load questions from JSON files
     async function loadQuestions(groups) {
         let allQuestions = [];
         
-        for (const group of groups) {
+        for (const groupFile of groups) {
             try {
-                const response = await fetch(`questions/group${group}.json`);
+                const response = await fetch(`questions/${groupFile}`);
+                if (!response.ok) throw new Error(`Failed to load ${groupFile}`);
                 const questions = await response.json();
+                
+                if (!Array.isArray(questions)) {
+                    throw new Error(`Invalid format in ${groupFile}. Expected array of questions.`);
+                }
+                
+                questions.forEach(q => {
+                    if (!q.question || !q.answers || !q.correctAnswer) {
+                        throw new Error(`Invalid question format in ${groupFile}`);
+                    }
+                });
+                
                 allQuestions = allQuestions.concat(questions);
             } catch (error) {
-                console.error(`Error loading group ${group}:`, error);
+                console.error(`Error loading ${groupFile}:`, error);
                 throw error;
             }
         }
         
-        // Shuffle and select questions
+        if (allQuestions.length === 0) {
+            throw new Error('No questions were loaded from selected groups');
+        }
+        
         return shuffleArray(allQuestions).slice(0, QUESTIONS_PER_TEST);
     }
 
-    // Show a question
     function showQuestion(question) {
         questionText.textContent = question.question;
         answersDiv.innerHTML = '';
@@ -135,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.disabled = true;
     }
 
-    // Check the answer
     function checkAnswer(button, selectedAnswer, correctAnswer) {
         const buttons = document.querySelectorAll('.answer-btn');
         
@@ -157,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.disabled = false;
     }
 
-    // Show next question
     function nextQuestion() {
         currentQuestionIndex++;
         
@@ -170,13 +188,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Restart the test
     function restartTest() {
         endScreen.style.display = 'none';
         startScreen.style.display = 'block';
     }
 
-    // Shuffle array
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -185,6 +201,5 @@ document.addEventListener('DOMContentLoaded', function() {
         return array;
     }
 
-    // Initialize the app
     init();
 });
