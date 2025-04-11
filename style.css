@@ -69,7 +69,7 @@ h1, h2 {
 }
 
 #question-text {
-    font-size: 7pt; /* ONLY THIS LINE CHANGED */
+    font-size: 9pt; /* ONLY THIS LINE CHANGED */
 }
 
 .answer-btn {
