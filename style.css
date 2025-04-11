@@ -1,5 +1,6 @@
 body {
     font-family: Arial, sans-serif;
+    font-size: 11pt; /* Added this line */
     margin: 0;
     padding: 0;
     background-color: #f5f5f5;
@@ -30,7 +31,7 @@ h1, h2 {
     color: white;
     border: none;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 11pt; /* Updated */
     cursor: pointer;
 }
 
@@ -49,6 +50,7 @@ h1, h2 {
     margin: 5px 0;
     background-color: #f1f3f4;
     border-radius: 4px;
+    font-size: 11pt; /* Updated */
 }
 
 .group-item input {
@@ -62,6 +64,7 @@ h1, h2 {
     padding: 10px;
     background-color: #e8f0fe;
     border-radius: 4px;
+    font-size: 11pt; /* Updated */
 }
 
 .question-area {
@@ -79,6 +82,7 @@ h1, h2 {
     text-align: left;
     cursor: pointer;
     color: black;
+    font-size: 11pt; /* Updated */
 }
 
 .correct {
@@ -92,7 +96,7 @@ h1, h2 {
 }
 
 #result {
-    font-size: 24px;
+    font-size: 11pt; /* Updated */
     text-align: center;
     margin: 20px 0;
 }
