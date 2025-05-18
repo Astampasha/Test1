@@ -9,10 +9,17 @@
 <body>
     <div class="container">
         <div id="start-screen">
-            <h1>Test</h1>
+            <h1>Test Application</h1>
             <div class="group-selection">
                 <h2>Select Question Groups</h2>
                 <button id="toggle-all-btn" class="full-width-btn">Select All Groups</button>
+                <label class="switch-container">
+                    <span>100 Questions</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-100-btn">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
                 <div id="group-controls"></div>
                 <button id="start-btn" class="full-width-btn">Start Test</button>
             </div>
@@ -20,8 +27,8 @@
 
         <div id="test-screen" style="display: none;">
             <div class="question-info">
-                <div id="question-counter">Question: 1/100</div>
-                <div id="score">Score: 0</div>
+                <div id="question-counter">Question: <span id="current-question">1</span>/<span id="total-questions">0</span></div>
+                <div id="score">Score: <span>0</span></div>
             </div>
             <div class="question-area">
                 <h2 id="question-text"></h2>
