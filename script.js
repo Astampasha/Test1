@@ -4,14 +4,14 @@ document.addEventListener('DOMContentLoaded', function() {
         { name: "პულმონოლოგია", file: "group4.json" },
         { name: "გასტროენტოლოგია", file: "group5.json" },
         { name: "ნეფროლოგია", file: "group7.json" },
-        { name: "ჰემატოლოგია", file: "group8.json" },
-        { name: "ენდოკრინოლოგია", file: "group10.json" },
-        { name: "რევმატოლოგია", file: "group11.json" },
-        { name: "იმუნოლოგია - ალეგოლორგია", file: "group12.json" },
-        { name: "პედიატრია", file: "group14.json" },
-        { name: "ქირურგია", file: "group18.json" },
-        { name: "გინეკოლოგია", file: "group21.json" },
-    ];
+          { name: "ჰემატოლოგია", file: "group8.json" },
+          { name: "ენდოკრინოლოგია", file: "group10.json" },
+          { name: "რევმატოლოგია", file: "group11.json" },
+          { name: "იმუნოლოგია - ალეგოლორგია", file: "group12.json" },
+          { name: "პედიატრია", file: "group14.json" },
+          { name: "ქირურგია", file: "group18.json" },
+          { name: "გინეკოლოგია", file: "group21.json" },
+          ];
 
     // DOM elements
     const startScreen = document.getElementById('start-screen');
@@ -19,29 +19,58 @@ document.addEventListener('DOMContentLoaded', function() {
     const endScreen = document.getElementById('end-screen');
     const groupControls = document.getElementById('group-controls');
     const toggleAllBtn = document.getElementById('toggle-all-btn');
+    const toggle100Btn = document.getElementById('toggle-100-btn');
     const startBtn = document.getElementById('start-btn');
     const nextBtn = document.getElementById('next-btn');
     const restartBtn = document.getElementById('restart-btn');
     const questionText = document.getElementById('question-text');
     const answersDiv = document.getElementById('answers');
-    const questionCounter = document.getElementById('question-counter');
-    const scoreDisplay = document.getElementById('score');
+    const currentQuestionSpan = document.getElementById('current-question');
+    const totalQuestionsSpan = document.getElementById('total-questions');
+    const scoreSpan = document.querySelector('#score span');
     const resultDiv = document.getElementById('result');
 
-    // Test state
-    let selectedGroups = [];
-    let testQuestions = [];
-    let currentQuestionIndex = 0;
-    let score = 0;
-    let totalQuestions = 0;
+    // Test state (try to load from sessionStorage)
+    let state = JSON.parse(sessionStorage.getItem('testAppState')) || {
+        selectedGroups: [],
+        testQuestions: [],
+        currentQuestionIndex: 0,
+        score: 0,
+        show100Questions: false,
+        testInProgress: false
+    };
 
     // Initialize the app
     function init() {
         createGroupControls();
         setupEventListeners();
+        restoreState();
     }
 
-    // Create group selection controls based on QUESTION_GROUPS
+    // Save state to sessionStorage
+    function saveState() {
+        sessionStorage.setItem('testAppState', JSON.stringify({
+            selectedGroups: state.selectedGroups,
+            testQuestions: state.testQuestions,
+            currentQuestionIndex: state.currentQuestionIndex,
+            score: state.score,
+            show100Questions: state.show100Questions,
+            testInProgress: state.testInProgress
+        }));
+    }
+
+    // Restore state from sessionStorage
+    function restoreState() {
+        if (state.testInProgress) {
+            toggle100Btn.checked = state.show100Questions;
+            if (state.show100Questions) {
+                document.querySelector('.slider').classList.add('checked');
+            }
+            startTestFromSavedState();
+        }
+    }
+
+    // Create group selection controls
     function createGroupControls() {
         groupControls.innerHTML = '';
         
@@ -53,6 +82,9 @@ document.addEventListener('DOMContentLoaded', function() {
             checkbox.type = 'checkbox';
             checkbox.id = `group-${index}`;
             checkbox.value = group.file;
+            if (state.selectedGroups.includes(group.file)) {
+                checkbox.checked = true;
+            }
             
             const label = document.createElement('label');
             label.htmlFor = `group-${index}`;
@@ -67,9 +99,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up event listeners
     function setupEventListeners() {
         toggleAllBtn.addEventListener('click', toggleAllGroups);
+        toggle100Btn.addEventListener('change', toggle100Questions);
         startBtn.addEventListener('click', startTest);
         nextBtn.addEventListener('click', nextQuestion);
         restartBtn.addEventListener('click', restartTest);
+        
+        // Handle page refresh
+        window.addEventListener('beforeunload', saveState);
     }
 
     // Toggle all groups
@@ -84,12 +120,30 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleAllBtn.textContent = allChecked ? 'Select All Groups' : 'Deselect All Groups';
     }
 
+    // Toggle 100 questions mode
+    function toggle100Questions() {
+        state.show100Questions = toggle100Btn.checked;
+        saveState();
+    }
+
+    // Start the test from saved state
+    async function startTestFromSavedState() {
+        startScreen.style.display = 'none';
+        testScreen.style.display = 'block';
+        
+        totalQuestionsSpan.textContent = state.testQuestions.length;
+        currentQuestionSpan.textContent = state.currentQuestionIndex + 1;
+        scoreSpan.textContent = state.score;
+        
+        showQuestion(state.testQuestions[state.currentQuestionIndex]);
+    }
+
     // Start the test
     async function startTest() {
-        selectedGroups = Array.from(document.querySelectorAll('.group-item input:checked'))
+        state.selectedGroups = Array.from(document.querySelectorAll('.group-item input:checked'))
                             .map(checkbox => checkbox.value);
         
-        if (selectedGroups.length === 0) {
+        if (state.selectedGroups.length === 0) {
             alert('Please select at least one question group!');
             return;
         }
@@ -98,21 +152,26 @@ document.addEventListener('DOMContentLoaded', function() {
         startBtn.textContent = 'Loading...';
         
         try {
-            testQuestions = await loadQuestions(selectedGroups);
-            totalQuestions = testQuestions.length;
+            state.testQuestions = await loadQuestions(state.selectedGroups);
             
-            if (totalQuestions === 0) {
+            if (state.testQuestions.length === 0) {
                 alert('No questions found in selected groups!');
                 return;
             }
             
+            state.currentQuestionIndex = 0;
+            state.score = 0;
+            state.testInProgress = true;
+            
+            totalQuestionsSpan.textContent = state.testQuestions.length;
+            currentQuestionSpan.textContent = 1;
+            scoreSpan.textContent = '0';
+            
             startScreen.style.display = 'none';
             testScreen.style.display = 'block';
-            currentQuestionIndex = 0;
-            score = 0;
-            scoreDisplay.textContent = '0';
-            updateQuestionCounter();
-            showQuestion(testQuestions[currentQuestionIndex]);
+            
+            showQuestion(state.testQuestions[state.currentQuestionIndex]);
+            saveState();
         } catch (error) {
             console.error('Error loading questions:', error);
             alert('Error loading questions. Please try again.');
@@ -132,7 +191,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!response.ok) throw new Error(`Failed to load ${groupFile}`);
                 const questions = await response.json();
                 
-                // Validate questions structure
                 if (!Array.isArray(questions)) {
                     throw new Error(`Invalid format in ${groupFile}. Expected array of questions.`);
                 }
@@ -151,7 +209,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Shuffle all questions
-        return shuffleArray(allQuestions);
+        const shuffled = shuffleArray(allQuestions);
+        
+        // Apply 100 question limit if toggle is active
+        return state.show100Questions ? shuffled.slice(0, 100) : shuffled;
     }
 
     // Show a question
@@ -170,11 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.disabled = true;
     }
 
-    // Update question counter
-    function updateQuestionCounter() {
-        questionCounter.textContent = `Question: ${currentQuestionIndex + 1}/${totalQuestions}`;
-    }
-
     // Check the answer
     function checkAnswer(button, selectedAnswer, correctAnswer) {
         const buttons = document.querySelectorAll('.answer-btn');
@@ -188,36 +244,42 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (selectedAnswer === correctAnswer) {
             button.classList.add('correct');
-            score++;
-            scoreDisplay.textContent = score;
+            state.score++;
+            scoreSpan.textContent = state.score;
         } else {
             button.classList.add('incorrect');
         }
         
         nextBtn.disabled = false;
+        saveState();
     }
 
     // Show next question
     function nextQuestion() {
-        currentQuestionIndex++;
+        state.currentQuestionIndex++;
         
-        if (currentQuestionIndex < totalQuestions) {
-            updateQuestionCounter();
-            showQuestion(testQuestions[currentQuestionIndex]);
+        if (state.currentQuestionIndex < state.testQuestions.length) {
+            currentQuestionSpan.textContent = state.currentQuestionIndex + 1;
+            showQuestion(state.testQuestions[state.currentQuestionIndex]);
+            saveState();
         } else {
+            state.testInProgress = false;
             testScreen.style.display = 'none';
             endScreen.style.display = 'block';
-            resultDiv.textContent = `Your Score: ${score}/${totalQuestions}`;
+            resultDiv.textContent = `Your Score: ${state.score}/${state.testQuestions.length}`;
+            saveState();
         }
     }
 
     // Restart the test
     function restartTest() {
+        state.testInProgress = false;
+        sessionStorage.removeItem('testAppState');
         endScreen.style.display = 'none';
         startScreen.style.display = 'block';
     }
 
-    // Fisher-Yates shuffle algorithm
+    // Shuffle array
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
