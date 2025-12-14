@@ -1,4 +1,7 @@
-document.addEventListener('DOMContentLoaded', function () {
+'use strict';
+
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Configuration ---
     const QUESTION_GROUPS = [
         { name: "კარდიოლოგია", file: "group1.json" },
         { name: "პულმონოლოგია", file: "group4.json" },
@@ -13,382 +16,316 @@ document.addEventListener('DOMContentLoaded', function () {
         { name: "გინეკოლოგია", file: "group21.json" },
     ];
 
-    // DOM elements
-    const startScreen = document.getElementById('start-screen');
-    const testScreen = document.getElementById('test-screen');
-    const endScreen = document.getElementById('end-screen');
-    const groupControls = document.getElementById('group-controls');
-    const toggleAllBtn = document.getElementById('toggle-all-btn');
-    const limitToggles = document.querySelectorAll('.limit-toggle');
-    const decreaseLimitBtn = document.getElementById('decrease-limit-btn');
-    const increaseLimitBtn = document.getElementById('increase-limit-btn');
-    const currentLimitDisplay = document.getElementById('current-limit-display');
-    const startBtn = document.getElementById('start-btn');
-    const nextBtn = document.getElementById('next-btn');
-    const restartBtn = document.getElementById('restart-btn');
-    const questionText = document.getElementById('question-text');
-    const answersDiv = document.getElementById('answers');
-    const currentQuestionSpan = document.getElementById('current-question');
-    const totalQuestionsSpan = document.getElementById('total-questions');
-    const scoreSpan = document.querySelector('#score span');
-    const resultDiv = document.getElementById('result');
-
-    // Test state (try to load from sessionStorage)
-    let state = JSON.parse(sessionStorage.getItem('testAppState')) || {
+    // --- State ---
+    const state = {
         selectedGroups: [],
-        testQuestions: [],
+        questions: [],
         currentQuestionIndex: 0,
         score: 0,
         questionLimit: 0,
-        testInProgress: false,
-        darkMode: localStorage.getItem('darkMode') === 'true'
+        isDarkMode: localStorage.getItem('isDarkMode') === 'true'
     };
 
-    // Initialize the app
+    // --- DOM Elements ---
+    const els = {
+        themeBtn: document.getElementById('theme-toggle'),
+        startScreen: document.getElementById('start-screen'),
+        testScreen: document.getElementById('test-screen'),
+        endScreen: document.getElementById('end-screen'),
+        groupControls: document.getElementById('group-controls'),
+        toggleAllBtn: document.getElementById('toggle-all-btn'),
+        limitToggles: document.querySelectorAll('.limit-toggle'),
+        decreaseLimitBtn: document.getElementById('decrease-limit-btn'),
+        increaseLimitBtn: document.getElementById('increase-limit-btn'),
+        currentLimitDisplay: document.getElementById('current-limit-display'),
+        startBtn: document.getElementById('start-btn'),
+        nextBtn: document.getElementById('next-btn'),
+        restartBtn: document.getElementById('restart-btn'),
+        questionText: document.getElementById('question-text'),
+        answersContainer: document.getElementById('answers-container'),
+        currentQuestionNum: document.getElementById('current-question-num'),
+        totalQuestionsNum: document.getElementById('total-questions-num'),
+        scoreVal: document.getElementById('score-val'),
+        finalResult: document.getElementById('final-result')
+    };
+
+    // --- Initialization ---
     function init() {
-        createGroupControls();
+        applyTheme();
+        renderGroupList();
         setupEventListeners();
-        restoreState();
-
-        // precise restoration of theme
-        if (state.darkMode) {
-            document.body.classList.add('dark-mode');
-            const themeBtn = document.getElementById('theme-toggle');
-            if (themeBtn) themeBtn.textContent = '☀️';
-        }
+        updateLimitDisplay(); // Initial display state
     }
 
-    // Save state to sessionStorage
-    function saveState() {
-        sessionStorage.setItem('testAppState', JSON.stringify({
-            selectedGroups: state.selectedGroups,
-            testQuestions: state.testQuestions,
-            currentQuestionIndex: state.currentQuestionIndex,
-            score: state.score,
-            questionLimit: state.questionLimit,
-            testInProgress: state.testInProgress
-        }));
-    }
-
-    // Restore state from sessionStorage
-    function restoreState() {
-        // Update limit display and toggles based on saved state
-        updateLimitDisplay();
-        updateLimitToggles();
-
-        if (state.testInProgress) {
-            startTestFromSavedState();
-        }
-    }
-
-    // Create group selection controls
-    function createGroupControls() {
-        groupControls.innerHTML = '';
+    // --- Rendering ---
+    function renderGroupList() {
+        els.groupControls.innerHTML = '';
 
         QUESTION_GROUPS.forEach((group, index) => {
-            const groupItem = document.createElement('div');
-            groupItem.className = 'group-item';
-
-            // Add click listener to the entire row
-            groupItem.addEventListener('click', (e) => {
-                // Return if the clicked element is the checkbox or label (let them handle it)
-                if (e.target === checkbox || e.target === label) return;
-
-                // Toggle the checkbox for clicks elsewhere in the row
-                checkbox.checked = !checkbox.checked;
-            });
+            const item = document.createElement('div');
+            item.className = 'group-item';
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = `group-${index}`;
             checkbox.value = group.file;
-            if (state.selectedGroups.includes(group.file)) {
-                checkbox.checked = true;
-            }
+            checkbox.dataset.name = group.name; // Keep name for reference if needed
 
             const label = document.createElement('label');
             label.htmlFor = `group-${index}`;
             label.textContent = group.name;
-            // Remove the preventDefault on label so it works natively or let the row handler handle it?
-            // If we exclude label from row handler (above), we don't need to prevent default on label.
-            // But if we click label, it toggles checkbox natively.
-            // So we just remove the preventDefault listener from label.
 
-            groupItem.appendChild(checkbox);
-            groupItem.appendChild(label);
-            groupControls.appendChild(groupItem);
-        });
-    }
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            els.groupControls.appendChild(item);
 
-    // Set up event listeners
-    function setupEventListeners() {
-        toggleAllBtn.addEventListener('click', toggleAllGroups);
-
-        // Limit toggle listeners
-        limitToggles.forEach(toggle => {
-            toggle.addEventListener('change', handleLimitToggle);
-        });
-
-        // Limit adjuster buttons
-        decreaseLimitBtn.addEventListener('click', () => adjustLimit(-50));
-        increaseLimitBtn.addEventListener('click', () => adjustLimit(50));
-
-        // Theme toggle
-        const themeBtn = document.getElementById('theme-toggle');
-        if (themeBtn) {
-            themeBtn.addEventListener('click', toggleTheme);
-        }
-
-        startBtn.addEventListener('click', startTest);
-        nextBtn.addEventListener('click', nextQuestion);
-        restartBtn.addEventListener('click', restartTest);
-
-        // Handle page refresh
-        window.addEventListener('beforeunload', saveState);
-    }
-
-    // Toggle theme
-    function toggleTheme() {
-        state.darkMode = !state.darkMode;
-        document.body.classList.toggle('dark-mode');
-
-        const themeBtn = document.getElementById('theme-toggle');
-        if (themeBtn) {
-            themeBtn.textContent = state.darkMode ? '☀️' : '🌙';
-        }
-
-        localStorage.setItem('darkMode', state.darkMode);
-    }
-
-    // Toggle all groups
-    function toggleAllGroups() {
-        const checkboxes = document.querySelectorAll('.group-item input');
-        const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
-
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = !allChecked;
-        });
-
-        toggleAllBtn.textContent = allChecked ? 'Select All Groups' : 'Deselect All Groups';
-    }
-
-    // Handle limit toggle change
-    function handleLimitToggle(e) {
-        const limit = parseInt(e.target.dataset.limit);
-
-        if (e.target.checked) {
-            // Set this limit and uncheck others
-            state.questionLimit = limit;
-            limitToggles.forEach(toggle => {
-                if (toggle !== e.target) {
-                    toggle.checked = false;
+            // Row click handler (Event Delegation is tricky with checkboxes, direct is safer for small lists)
+            item.addEventListener('click', (e) => {
+                if (e.target !== checkbox && e.target !== label) {
+                    checkbox.checked = !checkbox.checked;
                 }
             });
-        } else {
-            // If unchecking, remove limit
-            state.questionLimit = 0;
-        }
-
-        updateLimitDisplay();
-        saveState();
-    }
-
-    // Adjust limit by amount (+/- 50)
-    function adjustLimit(amount) {
-        const newLimit = state.questionLimit + amount;
-
-        // Minimum 50 questions if adjusting up from 0, otherwise minimum 0
-        if (newLimit <= 0) {
-            state.questionLimit = amount > 0 ? 50 : 0;
-        } else {
-            state.questionLimit = newLimit;
-        }
-
-        updateLimitToggles();
-        updateLimitDisplay();
-        saveState();
-    }
-
-    // Update limit display
-    function updateLimitDisplay() {
-        if (state.questionLimit === 0) {
-            currentLimitDisplay.textContent = 'No Limit';
-        } else {
-            currentLimitDisplay.textContent = `${state.questionLimit} Questions`;
-        }
-    }
-
-    // Update limit toggles based on current limit
-    function updateLimitToggles() {
-        limitToggles.forEach(toggle => {
-            const toggleLimit = parseInt(toggle.dataset.limit);
-            toggle.checked = (state.questionLimit === toggleLimit);
         });
     }
 
-    // Start the test from saved state
-    async function startTestFromSavedState() {
-        startScreen.style.display = 'none';
-        testScreen.style.display = 'block';
+    // --- Event Listeners ---
+    function setupEventListeners() {
+        els.themeBtn.addEventListener('click', toggleTheme);
+        els.toggleAllBtn.addEventListener('click', toggleAllGroups);
 
-        totalQuestionsSpan.textContent = state.testQuestions.length;
-        currentQuestionSpan.textContent = state.currentQuestionIndex + 1;
-        scoreSpan.textContent = state.score;
+        // Limit Toggles
+        els.limitToggles.forEach(toggle => {
+            toggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    setLimit(parseInt(e.target.dataset.limit));
+                    // Uncheck others
+                    els.limitToggles.forEach(t => {
+                        if (t !== e.target) t.checked = false;
+                    });
+                } else {
+                    setLimit(0);
+                }
+            });
+        });
 
-        showQuestion(state.testQuestions[state.currentQuestionIndex]);
+        // Limit Adjusters
+        els.decreaseLimitBtn.addEventListener('click', () => adjustLimit(-50));
+        els.increaseLimitBtn.addEventListener('click', () => adjustLimit(50));
+
+        // Navigation
+        els.startBtn.addEventListener('click', startTest);
+        els.nextBtn.addEventListener('click', nextQuestion);
+        els.restartBtn.addEventListener('click', resetApp);
     }
 
-    // Start the test
+    // --- Logic: Theme ---
+    function toggleTheme() {
+        state.isDarkMode = !state.isDarkMode;
+        localStorage.setItem('isDarkMode', state.isDarkMode);
+        applyTheme();
+    }
+
+    function applyTheme() {
+        if (state.isDarkMode) {
+            document.body.classList.add('dark-mode');
+            els.themeBtn.textContent = '☀️';
+        } else {
+            document.body.classList.remove('dark-mode');
+            els.themeBtn.textContent = '🌙';
+        }
+    }
+
+    // --- Logic: Groups & Limits ---
+    function toggleAllGroups() {
+        const checkboxes = els.groupControls.querySelectorAll('input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+        els.toggleAllBtn.textContent = allChecked ? "Select All" : "Deselect All";
+    }
+
+    function setLimit(limit) {
+        state.questionLimit = limit;
+        updateLimitDisplay();
+        updateLimitTogglesUI();
+    }
+
+    function adjustLimit(amount) {
+        let newLimit = state.questionLimit + amount;
+        if (newLimit < 0) newLimit = 0;
+        setLimit(newLimit);
+    }
+
+    function updateLimitDisplay() {
+        els.currentLimitDisplay.textContent = state.questionLimit === 0 ? "No Limit" : `${state.questionLimit} Questions`;
+    }
+
+    function updateLimitTogglesUI() {
+        els.limitToggles.forEach(t => {
+            t.checked = parseInt(t.dataset.limit) === state.questionLimit;
+        });
+    }
+
+    // --- Logic: Test Flow ---
     async function startTest() {
-        state.selectedGroups = Array.from(document.querySelectorAll('.group-item input:checked'))
-            .map(checkbox => checkbox.value);
+        // Collect selected files
+        const selectedCheckboxes = els.groupControls.querySelectorAll('input[type="checkbox"]:checked');
+        state.selectedGroups = Array.from(selectedCheckboxes).map(cb => cb.value);
 
         if (state.selectedGroups.length === 0) {
-            alert('Please select at least one question group!');
+            alert("Please select at least one category!");
             return;
         }
 
-        startBtn.disabled = true;
-        startBtn.textContent = 'Loading...';
+        // Loading state
+        els.startBtn.disabled = true;
+        els.startBtn.textContent = "Loading...";
 
         try {
-            state.testQuestions = await loadQuestions(state.selectedGroups);
+            const allQuestions = await loadAllQuestions(state.selectedGroups);
 
-            if (state.testQuestions.length === 0) {
-                alert('No questions found in selected groups!');
+            if (allQuestions.length === 0) {
+                alert("No questions found in selected categories.");
+                resetUI();
                 return;
             }
 
-            state.currentQuestionIndex = 0;
+            // Shuffle and Limit
+            shuffleArray(allQuestions);
+
+            if (state.questionLimit > 0) {
+                state.questions = allQuestions.slice(0, state.questionLimit);
+            } else {
+                state.questions = allQuestions;
+            }
+
+            // Reset scores
             state.score = 0;
-            state.testInProgress = true;
+            state.currentQuestionIndex = 0;
 
-            totalQuestionsSpan.textContent = state.testQuestions.length;
-            currentQuestionSpan.textContent = 1;
-            scoreSpan.textContent = '0';
+            // Update UI
+            els.totalQuestionsNum.textContent = state.questions.length;
+            els.scoreVal.textContent = "0";
 
-            startScreen.style.display = 'none';
-            testScreen.style.display = 'block';
+            // Switch Screen
+            els.startScreen.classList.add('hidden');
+            els.testScreen.classList.remove('hidden');
 
-            showQuestion(state.testQuestions[state.currentQuestionIndex]);
-            saveState();
+            renderQuestion();
+
         } catch (error) {
-            console.error('Error loading questions:', error);
-            alert('Error loading questions. Please try again.');
-        } finally {
-            startBtn.disabled = false;
-            startBtn.textContent = 'Start Test';
+            console.error(error);
+            alert("Error loading questions:\n" + error.message);
+            resetUI();
         }
     }
 
-    // Load questions from JSON files
-    async function loadQuestions(groups) {
-        let allQuestions = [];
-
-        for (const groupFile of groups) {
+    async function loadAllQuestions(files) {
+        let questions = [];
+        for (const file of files) {
             try {
-                const response = await fetch(`${groupFile}`);
-                if (!response.ok) throw new Error(`Failed to load ${groupFile}`);
-                const questions = await response.json();
-
-                if (!Array.isArray(questions)) {
-                    throw new Error(`Invalid format in ${groupFile}. Expected array of questions.`);
+                const response = await fetch(file);
+                if (!response.ok) throw new Error(`HTTP Error ${response.status} loading ${file}`);
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    questions = questions.concat(data);
+                } else {
+                    console.warn(`File ${file} did not contain an array.`);
                 }
-
-                questions.forEach(q => {
-                    if (!q.question || !q.answers || !q.correctAnswer) {
-                        throw new Error(`Invalid question format in ${groupFile}`);
-                    }
-                });
-
-                allQuestions = allQuestions.concat(questions);
-            } catch (error) {
-                console.error(`Error loading ${groupFile}:`, error);
-                alert(`Error loading ${groupFile}. Make sure the file exists and is uploaded to GitHub. Details: ${error.message}`);
-                throw error;
+            } catch (err) {
+                throw new Error(`Failed to load file: ${file}\n${err.message}`);
             }
         }
-
-        // Shuffle all questions
-        const shuffled = shuffleArray(allQuestions);
-
-        // Apply question limit if set
-        return state.questionLimit > 0 ? shuffled.slice(0, state.questionLimit) : shuffled;
+        return questions;
     }
 
-    // Show a question
-    function showQuestion(question) {
-        questionText.textContent = question.question;
-        answersDiv.innerHTML = '';
+    function renderQuestion() {
+        const q = state.questions[state.currentQuestionIndex];
 
-        question.answers.forEach(answer => {
-            const button = document.createElement('button');
-            button.className = 'answer-btn';
-            button.textContent = answer;
-            button.addEventListener('click', () => checkAnswer(button, answer, question.correctAnswer));
-            answersDiv.appendChild(button);
+        els.currentQuestionNum.textContent = state.currentQuestionIndex + 1;
+        els.questionText.textContent = q.question;
+        els.answersContainer.innerHTML = '';
+        els.nextBtn.disabled = true;
+
+        // Shuffle answers? Assuming we keep original order or shuffle if desired.
+        // Let's keep original order as per previous behavior/request usually.
+        // Copy answers to avoid mutating original if needed, but strings are primitive.
+
+        q.answers.forEach(answerText => {
+            const btn = document.createElement('button');
+            btn.className = 'answer-btn';
+            btn.textContent = answerText;
+            btn.addEventListener('click', () => handleAnswer(btn, answerText, q.correctAnswer));
+            els.answersContainer.appendChild(btn);
         });
-
-        nextBtn.disabled = true;
     }
 
-    // Check the answer
-    function checkAnswer(button, selectedAnswer, correctAnswer) {
-        const buttons = document.querySelectorAll('.answer-btn');
-
-        buttons.forEach(btn => {
+    function handleAnswer(selectedBtn, selectedText, correctText) {
+        // Disable all buttons
+        const allBtns = els.answersContainer.querySelectorAll('.answer-btn');
+        allBtns.forEach(btn => {
             btn.disabled = true;
-            if (btn.textContent === correctAnswer) {
+            if (btn.textContent === correctText) {
                 btn.classList.add('correct');
             }
         });
 
-        if (selectedAnswer === correctAnswer) {
-            button.classList.add('correct');
+        if (selectedText === correctText) {
             state.score++;
-            scoreSpan.textContent = state.score;
+            els.scoreVal.textContent = state.score;
+            selectedBtn.classList.add('correct'); // Already added above, but ensures visual feedback
         } else {
-            button.classList.add('incorrect');
+            selectedBtn.classList.add('incorrect');
         }
 
-        nextBtn.disabled = false;
-        saveState();
+        els.nextBtn.disabled = false;
     }
 
-    // Show next question
     function nextQuestion() {
         state.currentQuestionIndex++;
-
-        if (state.currentQuestionIndex < state.testQuestions.length) {
-            currentQuestionSpan.textContent = state.currentQuestionIndex + 1;
-            showQuestion(state.testQuestions[state.currentQuestionIndex]);
-            saveState();
+        if (state.currentQuestionIndex < state.questions.length) {
+            renderQuestion();
         } else {
-            state.testInProgress = false;
-            testScreen.style.display = 'none';
-            endScreen.style.display = 'block';
-            resultDiv.textContent = `Your Score: ${state.score}/${state.testQuestions.length}`;
-            saveState();
+            endTest();
         }
     }
 
-    // Restart the test
-    function restartTest() {
-        state.testInProgress = false;
-        sessionStorage.removeItem('testAppState');
-        endScreen.style.display = 'none';
-        startScreen.style.display = 'block';
+    function endTest() {
+        els.testScreen.classList.add('hidden');
+        els.endScreen.classList.remove('hidden');
+        els.finalResult.textContent = `Your Score: ${state.score} / ${state.questions.length}`;
     }
 
-    // Shuffle array
+    function resetApp() {
+        state.selectedGroups = [];
+        state.questions = [];
+        state.score = 0;
+        state.currentQuestionIndex = 0;
+
+        // Don't reset limit or theme, keep user preference
+        resetUI();
+    }
+
+    function resetUI() {
+        els.startBtn.disabled = false;
+        els.startBtn.textContent = "Start Test";
+        els.startScreen.classList.remove('hidden');
+        els.testScreen.classList.add('hidden');
+        els.endScreen.classList.add('hidden');
+
+        // Reset checkboxes? Maybe keep them selected for convenience.
+        // If we want to clear them:
+        // els.groupControls.querySelectorAll('input').forEach(cb => cb.checked = false);
+    }
+
+    // --- Helpers ---
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
         }
-        return array;
     }
 
-    // Initialize the app
+    // Run
     init();
 });
