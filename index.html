@@ -1,74 +1,85 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ka">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Application</title>
+    <title>Medical Test</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <div class="container">
         <button id="theme-toggle" class="theme-btn" aria-label="Toggle Dark Mode">🌙</button>
+
+        <!-- Start Screen -->
         <div id="start-screen">
-            <h1>Test Application</h1>
+            <h1>Medical Test Application</h1>
+
             <div class="group-selection">
-                <h2>Select Question Groups</h2>
-                <button id="toggle-all-btn" class="full-width-btn">Select All Groups</button>
+                <h2>Select Categories</h2>
+                <div class="controls-header">
+                    <button id="toggle-all-btn" class="action-btn">Select All</button>
+                </div>
+
                 <div class="limit-controls">
                     <h3>Question Limit</h3>
                     <div class="limit-toggles">
-                        <label class="switch-container">
+                        <label class="switch-wrapper">
                             <span>100</span>
-                            <label class="switch">
-                                <input type="checkbox" id="toggle-100-btn" class="limit-toggle" data-limit="100">
-                                <span class="slider round"></span>
-                            </label>
+                            <input type="checkbox" class="limit-toggle" data-limit="100">
+                            <span class="toggle-slider"></span>
                         </label>
-                        <label class="switch-container">
+                        <label class="switch-wrapper">
                             <span>200</span>
-                            <label class="switch">
-                                <input type="checkbox" id="toggle-200-btn" class="limit-toggle" data-limit="200">
-                                <span class="slider round"></span>
-                            </label>
+                            <input type="checkbox" class="limit-toggle" data-limit="200">
+                            <span class="toggle-slider"></span>
                         </label>
-                        <label class="switch-container">
+                        <label class="switch-wrapper">
                             <span>500</span>
-                            <label class="switch">
-                                <input type="checkbox" id="toggle-500-btn" class="limit-toggle" data-limit="500">
-                                <span class="slider round"></span>
-                            </label>
+                            <input type="checkbox" class="limit-toggle" data-limit="500">
+                            <span class="toggle-slider"></span>
                         </label>
                     </div>
+
                     <div class="limit-adjuster">
-                        <button id="decrease-limit-btn" class="limit-btn">−50</button>
+                        <button id="decrease-limit-btn" class="adjust-btn">−50</button>
                         <span id="current-limit-display">No Limit</span>
-                        <button id="increase-limit-btn" class="limit-btn">+50</button>
+                        <button id="increase-limit-btn" class="adjust-btn">+50</button>
                     </div>
                 </div>
-                <div id="group-controls"></div>
-                <button id="start-btn" class="full-width-btn">Start Test</button>
+
+                <div id="group-controls" class="group-list">
+                    <!-- Groups will be inserted here by JS -->
+                </div>
+
+                <button id="start-btn" class="primary-btn">Start Test</button>
             </div>
         </div>
 
-        <div id="test-screen" style="display: none;">
-            <div class="question-info">
-                <div id="question-counter">Question: <span id="current-question">1</span>/<span
-                        id="total-questions">0</span></div>
-                <div id="score">Score: <span>0</span></div>
+        <!-- Test Screen -->
+        <div id="test-screen" class="hidden">
+            <div class="info-bar">
+                <div class="counter">Question: <span id="current-question-num">0</span> / <span
+                        id="total-questions-num">0</span></div>
+                <div class="score">Score: <span id="score-val">0</span></div>
             </div>
-            <div class="question-area">
+
+            <div class="question-container">
                 <h2 id="question-text"></h2>
-                <div id="answers"></div>
+                <div id="answers-container"></div>
             </div>
-            <button id="next-btn" class="full-width-btn" disabled>Next Question</button>
+
+            <div class="nav-controls">
+                <button id="next-btn" class="primary-btn" disabled>Next Question</button>
+            </div>
         </div>
 
-        <div id="end-screen" style="display: none;">
+        <!-- End Screen -->
+        <div id="end-screen" class="hidden">
             <h2>Test Completed!</h2>
-            <div id="result"></div>
-            <button id="restart-btn" class="full-width-btn">Restart Test</button>
+            <div id="final-result" class="result-box"></div>
+            <button id="restart-btn" class="primary-btn">Restart</button>
         </div>
     </div>
 
